@@ -19,7 +19,7 @@ class PlaybackViewController: UIViewController {
     var currentSession: BCOVPlaybackSession?
     let sharedSDKManager = BCOVPlayerSDKManager.shared()
     let playbackService = BCOVPlaybackService(accountId: kViewControllerAccountID, policyKey: kViewControllerPlaybackServicePolicyKey)
-    let playbackController : BCOVPlaybackController?
+    var playbackController : BCOVPlaybackController?
     
     var hideableLayoutView: BCOVPUILayoutView?
     
@@ -41,14 +41,13 @@ class PlaybackViewController: UIViewController {
     
     
     private let deviceType = UIDevice().type
+
     
     required init?(coder aDecoder: NSCoder) {
-        playbackController = (sharedSDKManager?.createPlaybackController())!
+        // --> Here you can assign values to mutable (let) variables before super.init().
+
+        // <---
         super.init(coder: aDecoder)
-        
-        playbackController?.delegate = self
-        playbackController?.isAutoAdvance = true
-        playbackController?.isAutoPlay = true
     }
     
     override func viewDidLoad() {
@@ -56,11 +55,12 @@ class PlaybackViewController: UIViewController {
         // Set up our player view. Create with a standard VOD layout.
         self.navigationController?.setNavigationBarHidden(true, animated: true)
         self.setUpPlayer()
+
         nextButton.isHidden = false
         skipIntro.isHidden = false
         self.view.backgroundColor = UIColor.black
-        
     }
+    
     //MARK: Control view
     func setup(forControlsView controlsView: BCOVPUIBasicControlView, compactLayoutMaximumWidth: CGFloat) -> BCOVPUILayoutView? {
         
@@ -76,8 +76,15 @@ class PlaybackViewController: UIViewController {
         
         return layoutView
     }
+    
     //MARK: Set up player
     func setUpPlayer(){
+        
+        // Create BCOVPlaybackController
+        playbackController = (sharedSDKManager?.createPlaybackController())!
+        playbackController?.delegate = self
+        playbackController?.isAutoAdvance = true
+        playbackController?.isAutoPlay = true
         
         let options = BCOVPUIPlayerViewOptions()
         options.showPictureInPictureButton = true
@@ -124,17 +131,15 @@ class PlaybackViewController: UIViewController {
         requestContentFromPlaybackService(videoID: kViewControllerVideoID)
         
         playbackController?.play()
-        
     }
+    
     //MARK: Request for video
     func requestContentFromPlaybackService(videoID: String) {
-        if let currentSession = self.currentSession {
-            currentSession.player.replaceCurrentItem(with: nil)
-        }
+
 
         let defaults = UserDefaults.standard
-        let token = defaults.object(forKey: "VIDEOTOKEN") as? String
-        print("TOKEN HERE \(token)")
+        let token = defaults.object(forKey: "offlinedownloadtest") as? String
+        print("## Token (requestContentFromPlaybackService): \(token)")
         let video = BCOVOfflineVideoManager.shared()?.videoObject(fromOfflineVideoToken: token ?? "")
         if video!.playableOffline{
             if let v = video {
@@ -162,6 +167,7 @@ class PlaybackViewController: UIViewController {
             }
         }*/
     }
+    
     //MARK: Set up overlay view
     func setUpOverlayView(playerView: BCOVPUIPlayerView){
         playerView.controlsFadingView.addSubview(overlayView)
@@ -184,6 +190,10 @@ class PlaybackViewController: UIViewController {
     private func updateLayout(playerView : BCOVPUIPlayerView) {
         hideableLayoutView = setup(forControlsView: playerView.controlsView, compactLayoutMaximumWidth: view.frame.width)
     }
+}
+
+//MARK: UI events
+extension PlaybackViewController {
     @objc func backAction(){
         view.makeToast("Close button tapped")
         self.playbackController?.pause()
@@ -191,15 +201,49 @@ class PlaybackViewController: UIViewController {
     }
 }
 
-extension PlaybackViewController: BCOVPlaybackControllerDelegate {
-    func playbackController(_ controller: BCOVPlaybackController!, didAdvanceTo session: BCOVPlaybackSession!) {
-        self.currentSession = session
-        print("Advanced to new session (DEV)")
+//MARK: UIViewController events
+extension PlaybackViewController {
+    override func viewDidAppear(_ animated: Bool) {
+        print("## PlaybackViewController - viewDidAppear")
     }
-    func playbackController(_ controller: BCOVPlaybackController!, playbackSession session: BCOVPlaybackSession!, didProgressTo progress: TimeInterval) {
+    override func viewDidDisappear(_ animated: Bool) {
+        print("## PlaybackViewController - viewDidDisappear")
     }
 }
 
+//MARK: BCOVPlaybackControllerDelegate
+extension PlaybackViewController: BCOVPlaybackControllerDelegate {
+    func playbackController(_ controller: BCOVPlaybackController!,
+                            playbackSession session: BCOVPlaybackSession!,
+                            didReceive lifecycleEvent: BCOVPlaybackSessionLifecycleEvent!) {
+        
+        print("## PlaybackViewController - didReceive lifecycleEvent")
+        if let eventType = lifecycleEvent.eventType, let error = lifecycleEvent.properties[kBCOVPlaybackSessionEventKeyError] as? Error {
+            if eventType == kBCOVPlaybackSessionLifecycleEventFail {
+                print("Error: \(error.localizedDescription)")
+            }
+        } else if let eventType = lifecycleEvent.eventType {
+            print("\(lifecycleEvent.eventType.description)")
+        }
+    }
+    
+    func playbackController(_ controller: BCOVPlaybackController!, didAdvanceTo session: BCOVPlaybackSession!) {
+        // This method is called when ready to play a new video
+        print("## PC didAdvanceTo")
+        if let session = session {
+            self.currentSession = session
+        }
+        if let source = session.source {
+            print("Session source details: \(source)")
+        }
+    }
+    
+    func playbackController(_ controller: BCOVPlaybackController!, playbackSession session: BCOVPlaybackSession!, didProgressTo progress: TimeInterval) {
+        // This is where you can track playback progress of offline or online videos
+    }
+}
+
+//MARK: BCOVPUIPlayerViewDelegate
 extension PlaybackViewController: BCOVPUIPlayerViewDelegate {
     
     func pictureInPictureControllerDidStartPicture(inPicture pictureInPictureController: AVPictureInPictureController) {
@@ -221,9 +265,10 @@ extension PlaybackViewController: BCOVPUIPlayerViewDelegate {
     func picture(_ pictureInPictureController: AVPictureInPictureController!, failedToStartPictureInPictureWithError error: Error!) {
         print("failedToStartPictureInPictureWithError \(error.localizedDescription)")
     }
-    
 }
-extension PlaybackViewController{
+
+//MARK: Player Button events
+extension PlaybackViewController {
     //MARK: Button actions
     @objc func skipDurationLogic(sender : UIButton?){
         view.makeToast("Skip duration button tapped")

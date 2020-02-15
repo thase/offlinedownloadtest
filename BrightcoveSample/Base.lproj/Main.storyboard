@@ -11,7 +11,7 @@
         <!--Download View Controller-->
         <scene sceneID="ZUZ-cP-Mey">
             <objects>
-                <viewController storyboardIdentifier="ViewController1" id="00E-XN-vpt" customClass="DownloadViewController" customModule="BrightcoveSample1" customModuleProvider="target" sceneMemberID="viewController">
+                <viewController storyboardIdentifier="ViewController1" id="00E-XN-vpt" customClass="DownloadViewController" customModule="BrightcoveSample" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="6LI-Pr-yaH">
                         <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -47,7 +47,7 @@
         <!--Playback View Controller-->
         <scene sceneID="8kA-DZ-Zni">
             <objects>
-                <viewController storyboardIdentifier="PlayerVC" id="sPn-Ty-f86" customClass="PlaybackViewController" customModule="BrightcoveSample1" customModuleProvider="target" sceneMemberID="viewController">
+                <viewController storyboardIdentifier="PlaybackViewController" id="sPn-Ty-f86" customClass="PlaybackViewController" customModule="BrightcoveSample" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="sj0-xo-GzH">
                         <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
