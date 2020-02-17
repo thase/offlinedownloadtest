@@ -14,7 +14,6 @@ let kViewControllerPlaybackServicePolicyKey = "BCpkADawqM0T8lW3nMChuAbrcunBBHmh4
 let kViewControllerAccountID = "5434391461001"
 let kViewControllerVideoID = "5702141808001"
 
-
 class PlaybackViewController: UIViewController {
     var currentSession: BCOVPlaybackSession?
     let sharedSDKManager = BCOVPlayerSDKManager.shared()
@@ -54,11 +53,12 @@ class PlaybackViewController: UIViewController {
         super.viewDidLoad()
         // Set up our player view. Create with a standard VOD layout.
         self.navigationController?.setNavigationBarHidden(true, animated: true)
-        self.setUpPlayer()
-
+        
         nextButton.isHidden = false
         skipIntro.isHidden = false
         self.view.backgroundColor = UIColor.black
+        
+        self.setUpPlayer()
     }
     
     //MARK: Control view
@@ -106,22 +106,6 @@ class PlaybackViewController: UIViewController {
             playerView.bottomAnchor.constraint(equalTo: self.view.bottomAnchor)
             ])
 
-        /*if self.deviceType == Model.iPhoneX || self.deviceType == Model.iPhoneXS || self.deviceType == Model.iPhoneXSMax || self.deviceType == Model.iPhoneXR || self.deviceType == Model.iPhone11 || self.deviceType == Model.iPhone11Pro || self.deviceType == Model.iPhone11ProMax{
-            NSLayoutConstraint.activate([
-                playerView.topAnchor.constraint(equalTo: self.view.topAnchor),
-                playerView.rightAnchor.constraint(equalTo: self.view.rightAnchor, constant: 44),
-                playerView.leftAnchor.constraint(equalTo: self.view.leftAnchor, constant: -44),
-                playerView.bottomAnchor.constraint(equalTo: self.view.bottomAnchor)
-                ])
-        }else{
-            NSLayoutConstraint.activate([
-                playerView.topAnchor.constraint(equalTo: self.view.topAnchor),
-                playerView.rightAnchor.constraint(equalTo: self.view.rightAnchor),
-                playerView.leftAnchor.constraint(equalTo: self.view.leftAnchor),
-                playerView.bottomAnchor.constraint(equalTo: self.view.bottomAnchor)
-                ])
-        }*/
-
         setUpOverlayView(playerView: playerView)
         
         // Associate the playerView with the playback controller.
@@ -138,7 +122,7 @@ class PlaybackViewController: UIViewController {
 
 
         let defaults = UserDefaults.standard
-        let token = defaults.object(forKey: "offlinedownloadtest") as? String
+        let token = defaults.object(forKey: "offlinedownloadtests") as? String
         print("## Token (requestContentFromPlaybackService): \(token)")
         let video = BCOVOfflineVideoManager.shared()?.videoObject(fromOfflineVideoToken: token ?? "")
         if video!.playableOffline{
@@ -190,6 +174,14 @@ class PlaybackViewController: UIViewController {
     private func updateLayout(playerView : BCOVPUIPlayerView) {
         hideableLayoutView = setup(forControlsView: playerView.controlsView, compactLayoutMaximumWidth: view.frame.width)
     }
+    
+    deinit {
+        print("## PlaybackViewController - deinit!!!!!!!!!!!!!!!")
+        self.playbackController?.pause()
+        if let currentSession = self.currentSession {
+            currentSession.player.replaceCurrentItem(with: nil)
+        }
+    }
 }
 
 //MARK: UI events
@@ -208,7 +200,12 @@ extension PlaybackViewController {
     }
     override func viewDidDisappear(_ animated: Bool) {
         print("## PlaybackViewController - viewDidDisappear")
+//        self.playbackController?.pause()
+//        if let currentSession = self.currentSession {
+//            currentSession.player.replaceCurrentItem(with: nil)
+//        }
     }
+    
 }
 
 //MARK: BCOVPlaybackControllerDelegate
@@ -234,7 +231,7 @@ extension PlaybackViewController: BCOVPlaybackControllerDelegate {
             self.currentSession = session
         }
         if let source = session.source {
-            print("Session source details: \(source)")
+            print("## Session source details: \(source)")
         }
     }
     

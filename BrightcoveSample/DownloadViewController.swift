@@ -24,6 +24,7 @@ class DownloadViewController: UIViewController {
 
         // let authProxy = BCOVFPSBrightcoveAuthProxy(publisherId: nil, applicationId: nil)
         // BCOVOfflineVideoManager.shared()?.authProxy = authProxy
+        BCOVOfflineVideoManager.shared()?.authProxy = nil
 
         setupButtons();
     }
@@ -67,7 +68,7 @@ extension DownloadViewController {
     }
     
     private func bcovDownloadManager(video: BCOVVideo){
-        let parameters = [kBCOVOfflineVideoManagerRequestedBitrateKey : NSNumber(value: 3500)]
+        let parameters = [kBCOVOfflineVideoManagerRequestedBitrateKey : NSNumber(value: 3518900)]
         let defaults = UserDefaults.standard
 
         /*BCOVOfflineVideoManager.shared()?.requestVideoDownload(video, parameters: parameters, completion: { [weak self] (videotoken: String?, error: Error?) in
@@ -75,7 +76,6 @@ extension DownloadViewController {
             print("VIDEO DOWNLOAD HERE \(videotoken)")
             self.bcovVideoStatus(token: videotoken ?? "")
         })*/
-        
         
        // Display all available bitrates
         BCOVOfflineVideoManager.shared()?.variantBitrates(for: video, completion: { (bitrates: [NSNumber]?, error: Error?) in
@@ -106,36 +106,66 @@ extension DownloadViewController {
             avURLAsset = try BCOVOfflineVideoManager.shared()?.urlAsset(for: video)
         } catch {}
         
-        // If mediaSelections is `nil` the SDK will default to the AVURLAsset's `preferredMediaSelection`
-        var mediaSelections = [AVMediaSelection]()
+        
+        let mediaCharacteristics: [AVMediaCharacteristic]? = avURLAsset?.availableMediaCharacteristicsWithMediaSelectionOptions
+        
+//        guard mediaCharacteristics != nil else {
+//            print("## No mediaCharacteristics");
+//            //return;
+//        }
+        print("##  mediaCharacteristics");
+        for mediaChamediaCharacteristic in mediaCharacteristics! {
+            print("## \(mediaCharacteristics?.description)");
+        }
         
         if let avURLAsset = avURLAsset {
             if #available(iOS 11.0, *) {
-                mediaSelections = avURLAsset.allMediaSelections
-            }
-            
-            if let legibleMediaSelectionGroup = avURLAsset.mediaSelectionGroup(forMediaCharacteristic: .legible), let audibleMediaSelectionGroup = avURLAsset.mediaSelectionGroup(forMediaCharacteristic: .audible) {
+                // mediaSelections = avURLAsset.allMediaSelections
+                let mediaSelection = avURLAsset.preferredMediaSelection
                 
-                var counter = 0
-                for selection in mediaSelections {
-                    let legibleMediaSelectionOption = selection.selectedMediaOption(in: legibleMediaSelectionGroup)
-                    let audibleMediaSelectionOption = selection.selectedMediaOption(in: audibleMediaSelectionGroup)
-                    
+                if let legibleMediaSelectionGroup = avURLAsset.mediaSelectionGroup(forMediaCharacteristic: .legible),
+                    let audibleMediaSelectionGroup = avURLAsset.mediaSelectionGroup(forMediaCharacteristic: .audible) {
+                
+                    let legibleMediaSelectionOption = mediaSelection.selectedMediaOption(in: legibleMediaSelectionGroup)
+                    let audibleMediaSelectionOption = mediaSelection.selectedMediaOption(in: audibleMediaSelectionGroup)
+
                     let legibleName = legibleMediaSelectionOption?.displayName ?? "nil"
                     let audibleName = audibleMediaSelectionOption?.displayName ?? "nil"
-                    
-                    print("## AVMediaSelection option \(counter) | legible display name: \(legibleName)")
-                    print("## AVMediaSelection option \(counter) | audible display name: \(audibleName)")
-                    counter += 1
+
+                    print("## legible display name: \(legibleName)")
+                    print("## audible display name: \(audibleName)")
                 }
-                
             }
+            
+//            if let legibleMediaSelectionGroup = avURLAsset.mediaSelectionGroup(forMediaCharacteristic: .legible), let audibleMediaSelectionGroup = avURLAsset.mediaSelectionGroup(forMediaCharacteristic: .audible) {
+//
+//                var counter = 0
+//                for selection in mediaSelections! {
+//                            print("\(selection)")
+//                    let legibleMediaSelectionOption = selection.selectedMediaOption(in: legibleMediaSelectionGroup)
+//                    let audibleMediaSelectionOption = selection.selectedMediaOption(in: audibleMediaSelectionGroup)
+//
+//                    let legibleName = legibleMediaSelectionOption?.displayName ?? "nil"
+//                    let audibleName = audibleMediaSelectionOption?.displayName ?? "nil"
+//
+//                    print("## AVMediaSelection option \(counter) | legible display name: \(legibleName)")
+//                    print("## AVMediaSelection option \(counter) | audible display name: \(audibleName)")
+//                    counter += 1
+//                }
+//
+//            }
         }
 
-        BCOVOfflineVideoManager.shared()?.requestVideoDownload(video, mediaSelections: nil, parameters: parameters, completion: { [weak self] (videotoken: String?, error: Error?) in
+        // If mediaSelections is `nil` the SDK will default to the AVURLAsset's `preferredMediaSelection`
+        // var mediaSelections:[AVMediaSelection]? = [AVMediaSelection]()
+         
+        // Setting mediaSelections to nil.
+        let mediaSelections : [AVMediaSelection]?  = nil
+        
+        BCOVOfflineVideoManager.shared()?.requestVideoDownload(video, mediaSelections: mediaSelections, parameters: parameters, completion: { [weak self] (videotoken: String?, error: Error?) in
             guard let `self` = self else { return }
             print("## Offline Download Token: \(videotoken)")
-            defaults.set(videotoken!, forKey: "offlinedownloadtest")
+            defaults.set(videotoken!, forKey: "offlinedownloadtests")
             defaults.synchronize()
             self.bcovVideoStatus(token: videotoken ?? "")
         })
@@ -145,10 +175,36 @@ extension DownloadViewController {
         let status = BCOVOfflineVideoManager.shared()?.offlineVideoStatus(forToken: token)
         if let status = status {
             print("## Offline Download Status: \(status.downloadPercent) \(status.downloadState.rawValue) \(status.error)")
+
+
         }
     }
+    
+    
+    class func mediaSelectionDescription(fromMediaSelection selection: AVMediaSelection, forToken token: String) -> String {
+        // Get the offline video object and its path
+        guard let offlineVideo = BCOVOfflineVideoManager.shared()?.videoObject(fromOfflineVideoToken: token), let videoPath = offlineVideo.properties[kBCOVOfflineVideoFilePathPropertyKey] as? String else {
+            return "MediaSelection(n/a)"
+        }
+        
+        let videoPathURL = URL(fileURLWithPath: videoPath)
+        let urlAsset = AVURLAsset(url: videoPathURL)
+        let desc = mediaSelectionDescription(fromMediaSelection: selection, withURLAsset: urlAsset)
+        
+        return desc
+    }
+    
+    class func mediaSelectionDescription(fromMediaSelection selection: AVMediaSelection, withURLAsset asset: AVURLAsset) -> String {
+        
+        // Return a string description of the specified Media Selection.
+        guard let legibleMSG = asset.mediaSelectionGroup(forMediaCharacteristic: .legible), let audibleMSG = asset.mediaSelectionGroup(forMediaCharacteristic: .audible) else {
+            return "MediaSelection(n/a)"
+        }
+        let legibleDisplayName = selection.selectedMediaOption(in: legibleMSG)?.displayName ?? "-"
+        let audibleDisplayName = selection.selectedMediaOption(in: audibleMSG)?.displayName ?? "-"
+        return "MediaSelection(obj:\(selection), legible:\(legibleDisplayName), audible:\(audibleDisplayName))"
+    }
 }
-
 
 
 extension DownloadViewController: BCOVOfflineVideoManagerDelegate{
@@ -157,17 +213,21 @@ extension DownloadViewController: BCOVOfflineVideoManagerDelegate{
 //        print("## BCOVOfflineVideoManagerDelegate - didProgressTo \(progressPercent) \(downloadTask)")
 //    }
     func offlineVideoToken(_ offlineVideoToken: String!, didFinishDownloadWithError error: Error!) {
-        //print("didFinishDownloadWithError \(offlineVideoToken) \(error.localizedDescription)")
+        print("## didFinishDownloadWithError \(offlineVideoToken) \(error)")
     }
     func offlineVideoToken(_ offlineVideoToken: String!, aggregateDownloadTask: AVAggregateAssetDownloadTask!, didProgressTo progressPercent: TimeInterval, for mediaSelection: AVMediaSelection!) {
+        
         print("## BCOVOfflineVideoManagerDelegate - didProgressTo (Aggregated) \(offlineVideoToken) \(progressPercent)")
         if progressPercent >= 100.0{
             
         }
     }
     func offlineVideoToken(_ offlineVideoToken: String!, didFinishMediaSelectionDownload mediaSelection: AVMediaSelection!) {
-        print("## BCOVOfflineVideoManagerDelegate - didFinishMediaSelectionDownload)")
-        print("\(mediaSelection)")
-        
+        print("## BCOVOfflineVideoManagerDelegate - didFinishMediaSelectionDownload")
+        //print("\(mediaSelection)")
+        let status: BCOVOfflineVideoStatus?  = BCOVOfflineVideoManager.shared()?.offlineVideoStatus(forToken: offlineVideoToken)
+        let avasset: AVURLAsset? = status?.aggregateDownloadTask.urlAsset;
+        let message: String = DownloadViewController.mediaSelectionDescription(fromMediaSelection:mediaSelection, withURLAsset:avasset!)
+        print("## didFinishMediaSelectionDownload: \(message) withToken: \(offlineVideoToken)")
     }
 }
